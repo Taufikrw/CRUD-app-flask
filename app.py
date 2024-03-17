@@ -2,7 +2,7 @@ import bcrypt
 from flask import Flask, render_template, redirect, url_for, session, flash
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
-from wtforms.validators import DataRequired, Email, ValidationError
+from wtforms.validators import DataRequired, Email, ValidationError, URL
 from flask_mysqldb import MySQL
 
 app = Flask(__name__)
@@ -34,11 +34,31 @@ class RegisterForm(FlaskForm):
 class LoginForm(FlaskForm):
     email = StringField("Email", validators=[DataRequired(), Email()])
     password = PasswordField("Password", validators=[DataRequired()])
-    submit = SubmitField("Register")
+    submit = SubmitField("Login")
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+class EyeglassesForm(FlaskForm):
+    # link = StringField("Link Website", validators=[URL()])
+    name = StringField("Name", validators=[DataRequired()])
+    brand = StringField("Brand", validators=[DataRequired()])
+    # faceShape = StringField("Face Shape")
+    price = StringField("Price", validators=[DataRequired()])
+    gender = StringField("Gender", validators=[DataRequired()])
+    # frameColour = StringField("Frame Color")
+    # frameShape = StringField("Frame Shape")
+    # frameStyle = StringField("Frame Style")
+    # linkPic1 = StringField("Link Pic 1")
+    # linkPic2 = StringField("Link Pic 2")
+    # linkPic3 = StringField("Link Pic 3")
+    # frameMaterial = StringField("Frame Material")
+    submit = SubmitField("Submit")
+
+@app.route('/dashboard')
+def dashboard():
+    cursor = mysql.connection.cursor()
+    cursor.execute("SELECT * FROM eyeglasses")
+    data = cursor.fetchall()
+    cursor.close()
+    return render_template('dashboard.html', data = data)
 
 @app.route('/login', methods = ['GET', 'POST'])
 def login():
@@ -53,7 +73,7 @@ def login():
         cursor.close()
         if user and bcrypt.checkpw(password.encode('utf-8'), user[3].encode('utf-8')):
             session['user_id'] = user[0]
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('index'))
         else:
             flash("Login failed. Please check your email and password")
             return redirect(url_for('login'))
@@ -80,8 +100,8 @@ def register():
 
     return render_template('register.html', form = form)
 
-@app.route('/dashboard')
-def dashboard():
+@app.route('/')
+def index():
     if 'user_id' in session:
         user_id = session['user_id']
 
@@ -91,7 +111,7 @@ def dashboard():
         cursor.close()
 
         if user:
-            return render_template('dashboard.html', user = user)
+            return render_template('index.html', user = user)
 
     return redirect(url_for('login'))
 
@@ -100,6 +120,59 @@ def logout():
     session.pop('user_id', None)
     flash("Logout Sukses")
     return redirect(url_for('login'))
+
+@app.route('/create', methods = ['GET', 'POST'])
+def create_eyeglasses():
+    form = EyeglassesForm()
+    if form.validate_on_submit():
+        name = form.name.data
+        brand = form.brand.data
+        price = form.price.data
+        gender = form.gender.data
+
+        #store db
+        cursor = mysql.connection.cursor()
+        cursor.execute("INSERT INTO eyeglasses (name, brand, price, gender) VALUES (%s, %s, %s, %s)", (name, brand, price, gender))
+        mysql.connection.commit()
+        cursor.close()
+
+        flash("Eyeglasses successfully added")
+        return redirect(url_for('dashboard'))
+
+    return render_template('create.html', form = form)
+
+@app.route('/<id>/update', methods = ['GET', 'POST'])
+def update_eyeglasses(id):
+    form = EyeglassesForm()
+    cursor = mysql.connection.cursor()
+    cursor.execute("SELECT * FROM eyeglasses WHERE id = %s", (id,))
+    data = cursor.fetchone()
+    cursor.close()
+
+    if form.validate_on_submit():
+        name = form.name.data
+        brand = form.brand.data
+        price = form.price.data
+        gender = form.gender.data
+
+        #store db
+        cursor = mysql.connection.cursor()
+        cursor.execute("UPDATE eyeglasses SET name = %s, brand = %s, price = %s, gender = %s WHERE id = %s", (name, brand, price, gender, id))
+        mysql.connection.commit()
+        cursor.close()
+
+        flash("Eyeglasses successfully edited")
+        return redirect(url_for('dashboard'))
+
+    return render_template('update.html', form = form, data = data)
+
+@app.route('/<id>/delete', methods=['GET'])
+def delete(id):
+    cursor = mysql.connection.cursor()
+    cursor.execute("DELETE FROM eyeglasses WHERE id = %s", (id,))
+    mysql.connection.commit()
+    flash("Eyeglasses successfully deleted")
+    return redirect(url_for('dashboard'))
 
 if __name__ == '__main__':
     app.run(debug=True)
