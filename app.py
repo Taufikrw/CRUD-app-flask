@@ -54,11 +54,14 @@ class EyeglassesForm(FlaskForm):
 
 @app.route('/dashboard')
 def dashboard():
-    cursor = mysql.connection.cursor()
-    cursor.execute("SELECT * FROM eyeglasses")
-    data = cursor.fetchall()
-    cursor.close()
-    return render_template('dashboard.html', data = data)
+    if 'user_id' in session:
+        cursor = mysql.connection.cursor()
+        cursor.execute("SELECT * FROM eyeglasses")
+        data = cursor.fetchall()
+        cursor.close()
+        return render_template('dashboard.html', data = data)
+
+    return redirect(url_for('login'))
 
 @app.route('/login', methods = ['GET', 'POST'])
 def login():
@@ -102,18 +105,7 @@ def register():
 
 @app.route('/')
 def index():
-    if 'user_id' in session:
-        user_id = session['user_id']
-
-        cursor = mysql.connection.cursor()
-        cursor.execute("SELECT * FROM users WHERE id=%s", (user_id,))
-        user = cursor.fetchone()
-        cursor.close()
-
-        if user:
-            return render_template('index.html', user = user)
-
-    return redirect(url_for('login'))
+    return render_template('index.html')
 
 @app.route('/logout')
 def logout():
@@ -123,56 +115,89 @@ def logout():
 
 @app.route('/create', methods = ['GET', 'POST'])
 def create_eyeglasses():
-    form = EyeglassesForm()
-    if form.validate_on_submit():
-        name = form.name.data
-        brand = form.brand.data
-        price = form.price.data
-        gender = form.gender.data
+    if 'user_id' in session:
+        form = EyeglassesForm()
+        if form.validate_on_submit():
+            name = form.name.data
+            brand = form.brand.data
+            price = form.price.data
+            gender = form.gender.data
 
-        #store db
-        cursor = mysql.connection.cursor()
-        cursor.execute("INSERT INTO eyeglasses (name, brand, price, gender) VALUES (%s, %s, %s, %s)", (name, brand, price, gender))
-        mysql.connection.commit()
-        cursor.close()
+            #store db
+            cursor = mysql.connection.cursor()
+            cursor.execute("INSERT INTO eyeglasses (name, brand, price, gender) VALUES (%s, %s, %s, %s)", (name, brand, price, gender))
+            mysql.connection.commit()
+            cursor.close()
 
-        flash("Eyeglasses successfully added")
-        return redirect(url_for('dashboard'))
+            flash("Eyeglasses successfully added")
+            return redirect(url_for('dashboard'))
 
-    return render_template('create.html', form = form)
+        return render_template('create.html', form = form)
+
+    return redirect(url_for('login'))
 
 @app.route('/<id>/update', methods = ['GET', 'POST'])
 def update_eyeglasses(id):
-    form = EyeglassesForm()
-    cursor = mysql.connection.cursor()
-    cursor.execute("SELECT * FROM eyeglasses WHERE id = %s", (id,))
-    data = cursor.fetchone()
-    cursor.close()
-
-    if form.validate_on_submit():
-        name = form.name.data
-        brand = form.brand.data
-        price = form.price.data
-        gender = form.gender.data
-
-        #store db
+    if 'user_id' in session:
+        form = EyeglassesForm()
         cursor = mysql.connection.cursor()
-        cursor.execute("UPDATE eyeglasses SET name = %s, brand = %s, price = %s, gender = %s WHERE id = %s", (name, brand, price, gender, id))
-        mysql.connection.commit()
+        cursor.execute("SELECT * FROM eyeglasses WHERE id = %s", (id,))
+        data = cursor.fetchone()
         cursor.close()
 
-        flash("Eyeglasses successfully edited")
-        return redirect(url_for('dashboard'))
+        if form.validate_on_submit():
+            name = form.name.data
+            brand = form.brand.data
+            price = form.price.data
+            gender = form.gender.data
 
-    return render_template('update.html', form = form, data = data)
+            #store db
+            cursor = mysql.connection.cursor()
+            cursor.execute("UPDATE eyeglasses SET name = %s, brand = %s, price = %s, gender = %s WHERE id = %s", (name, brand, price, gender, id))
+            mysql.connection.commit()
+            cursor.close()
+
+            flash("Eyeglasses successfully edited")
+            return redirect(url_for('dashboard'))
+
+        return render_template('update.html', form = form, data = data)
+    
+    return redirect(url_for('login'))
 
 @app.route('/<id>/delete', methods=['GET'])
 def delete(id):
-    cursor = mysql.connection.cursor()
-    cursor.execute("DELETE FROM eyeglasses WHERE id = %s", (id,))
-    mysql.connection.commit()
-    flash("Eyeglasses successfully deleted")
-    return redirect(url_for('dashboard'))
+    if 'user_id' in session:
+        cursor = mysql.connection.cursor()
+        cursor.execute("DELETE FROM eyeglasses WHERE id = %s", (id,))
+        mysql.connection.commit()
+        flash("Eyeglasses successfully deleted")
+
+        return redirect(url_for('dashboard'))
+
+    return redirect(url_for('login'))
+
+@app.route('/profile')
+def profile():
+    if 'user_id' in session:
+        user_id = session['user_id']
+
+        cursor = mysql.connection.cursor()
+        cursor.execute("SELECT * FROM users WHERE id=%s", (user_id,))
+        user = cursor.fetchone()
+        cursor.close()
+
+        if user:
+            return render_template('profile.html', user = user)
+        
+    return redirect(url_for('login'))
+
+@app.route('/products')
+def products():
+    return render_template('products.html')
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
 
 if __name__ == '__main__':
     app.run(debug=True)
