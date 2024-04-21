@@ -76,7 +76,7 @@ def login():
         cursor.close()
         if user and bcrypt.checkpw(password.encode('utf-8'), user[3].encode('utf-8')):
             session['user_id'] = user[0]
-            return redirect(url_for('index'))
+            return redirect(url_for('profile'))
         else:
             flash("Login failed. Please check your email and password")
             return redirect(url_for('login'))
@@ -193,7 +193,21 @@ def profile():
 
 @app.route('/products')
 def products():
-    return render_template('products.html')
+    cursor = mysql.connection.cursor()
+    cursor.execute("SELECT * FROM eyeglasses")
+    data = cursor.fetchall()
+    cursor.close()
+
+    return render_template('products.html', data = data)
+
+@app.route('/<id>', methods=['GET'])
+def detail():
+    cursor = mysql.connection.cursor()
+    cursor.execute("SELECT * FROM eyeglasses WHERE id = %s", (id,))
+    data = cursor.fetchone()
+    cursor.close()
+
+    return render_template('detail.html', data = data)
 
 @app.errorhandler(404)
 def page_not_found(e):
