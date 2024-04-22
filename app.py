@@ -1,8 +1,9 @@
-import bcrypt
+import bcrypt, os
 from flask import Flask, render_template, redirect, url_for, session, flash
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField
+from wtforms import StringField, PasswordField, SubmitField, FileField
 from wtforms.validators import DataRequired, Email, ValidationError, URL
+from werkzeug.utils import secure_filename
 from flask_mysqldb import MySQL
 
 app = Flask(__name__)
@@ -13,6 +14,7 @@ app.config['MYSQL_USER'] = 'root'
 app.config['MYSQL_PASSWORD'] = ''
 app.config['MYSQL_DB'] = 'opticool_test'
 app.secret_key = 'your_secret_key_here'
+app.config['UPLOAD_FOLDER'] = 'static/files'
 
 mysql = MySQL(app)
 
@@ -37,7 +39,7 @@ class LoginForm(FlaskForm):
     submit = SubmitField("Login")
 
 class EyeglassesForm(FlaskForm):
-    # link = StringField("Link Website", validators=[URL()])
+    link = StringField("Link Website", validators=[URL(), DataRequired()])
     name = StringField("Name", validators=[DataRequired()])
     brand = StringField("Brand", validators=[DataRequired()])
     # faceShape = StringField("Face Shape")
@@ -46,10 +48,18 @@ class EyeglassesForm(FlaskForm):
     # frameColour = StringField("Frame Color")
     # frameShape = StringField("Frame Shape")
     # frameStyle = StringField("Frame Style")
-    # linkPic1 = StringField("Link Pic 1")
+    linkPic1 = FileField("Picture (can't be edit)", validators=[DataRequired()])
     # linkPic2 = StringField("Link Pic 2")
     # linkPic3 = StringField("Link Pic 3")
     # frameMaterial = StringField("Frame Material")
+    submit = SubmitField("Submit")
+
+class UpdateEyeglassesForm(FlaskForm):
+    link = StringField("Link Website", validators=[URL(), DataRequired()])
+    name = StringField("Name", validators=[DataRequired()])
+    brand = StringField("Brand", validators=[DataRequired()])
+    price = StringField("Price", validators=[DataRequired()])
+    gender = StringField("Gender", validators=[DataRequired()])
     submit = SubmitField("Submit")
 
 @app.route('/dashboard')
@@ -122,10 +132,14 @@ def create_eyeglasses():
             brand = form.brand.data
             price = form.price.data
             gender = form.gender.data
+            link = form.link.data
+            picture = form.linkPic1.data
+            picture.save(os.path.join(os.path.abspath(os.path.dirname(__file__)), app.config['UPLOAD_FOLDER'], secure_filename(picture.filename)))
+            picturefiles = secure_filename(picture.filename)
 
             #store db
             cursor = mysql.connection.cursor()
-            cursor.execute("INSERT INTO eyeglasses (name, brand, price, gender) VALUES (%s, %s, %s, %s)", (name, brand, price, gender))
+            cursor.execute("INSERT INTO eyeglasses (name, brand, price, gender, linkPic1) VALUES (%s, %s, %s, %s, %s)", (name, brand, price, gender, picturefiles))
             mysql.connection.commit()
             cursor.close()
 
@@ -139,7 +153,7 @@ def create_eyeglasses():
 @app.route('/<id>/update', methods = ['GET', 'POST'])
 def update_eyeglasses(id):
     if 'user_id' in session:
-        form = EyeglassesForm()
+        form = UpdateEyeglassesForm()
         cursor = mysql.connection.cursor()
         cursor.execute("SELECT * FROM eyeglasses WHERE id = %s", (id,))
         data = cursor.fetchone()
@@ -150,10 +164,11 @@ def update_eyeglasses(id):
             brand = form.brand.data
             price = form.price.data
             gender = form.gender.data
+            linkWeb = form.link.data
 
             #store db
             cursor = mysql.connection.cursor()
-            cursor.execute("UPDATE eyeglasses SET name = %s, brand = %s, price = %s, gender = %s WHERE id = %s", (name, brand, price, gender, id))
+            cursor.execute("UPDATE eyeglasses SET link = %s, name = %s, brand = %s, price = %s, gender = %s WHERE id = %s", (linkWeb, name, brand, price, gender, id))
             mysql.connection.commit()
             cursor.close()
 

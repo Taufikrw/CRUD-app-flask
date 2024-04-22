@@ -5,10 +5,10 @@ Create
 {% endblock %}
 
 {% block page_content %}
-<div class="row justify-content-center mt-5">
+<div class="row justify-content-center my-5">
     <div class="col-6">
         <h2 class="mb-5 mt-3 text-center">Create Eyeglasses</h2>
-        <form action="/create" method="POST">
+        <form action="/create" method="POST" enctype="multipart/form-data">
             {{ form.hidden_tag() }}
             <div class="mb-3">
                 {{ form.name.label(for="name") }}
@@ -53,6 +53,30 @@ Create
                 {% if form.gender.errors %}
                 <ul>
                     {% for error in form.gender.errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+            <div class="mb-3">
+                {{ form.link.label(for="link") }}
+                {{ form.link(id="link", class="form-control") }}
+
+                {% if form.link.errors %}
+                <ul>
+                    {% for error in form.link.errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+            <div class="mb-3">
+                {{ form.linkPic1.label(for="linkPic") }}
+                {{ form.linkPic1(id="linkPic", class="form-control") }}
+
+                {% if form.linkPic1.errors %}
+                <ul>
+                    {% for error in form.linkPic1.errors %}
                     <li>{{ error }}</li>
                     {% endfor %}
                 </ul>
