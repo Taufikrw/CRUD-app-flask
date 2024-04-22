@@ -215,14 +215,14 @@ def products():
 
     return render_template('products.html', data = data)
 
-@app.route('/<id>', methods=['GET'])
-def detail():
+@app.route('/products/<gender>', methods=['GET'])
+def get_gender(gender):
     cursor = mysql.connection.cursor()
-    cursor.execute("SELECT * FROM eyeglasses WHERE id = %s", (id,))
-    data = cursor.fetchone()
+    cursor.execute("SELECT * FROM eyeglasses WHERE gender = %s", (gender, ))
+    data = cursor.fetchall()
     cursor.close()
 
-    return render_template('detail.html', data = data)
+    return render_template('products.html', data = data)
 
 @app.errorhandler(404)
 def page_not_found(e):
